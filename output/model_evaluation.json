@@ -1,0 +1,31 @@
+{
+  "Accuracy": 0.822,
+  "F1-Score": 0.7922,
+  "Precision": 0.8066,
+  "Recall": 0.822,
+  "AUC-ROC": 0.8035,
+  "feature_importance": {
+    "trade_hour": 0.4106,
+    "volatility_7h": 0.1135,
+    "price_range": 0.1025,
+    "high_price": 0.0502,
+    "ma_7h": 0.0474,
+    "prev_close": 0.0466,
+    "open_price": 0.0433,
+    "pct_change": 0.0417,
+    "close_price": 0.0358,
+    "low_price": 0.0335,
+    "ma_24h": 0.0335,
+    "month": 0.0282,
+    "day_of_week": 0.0132,
+    "avg_sentiment": 0.0,
+    "total_articles": 0.0,
+    "positive_count": 0.0,
+    "negative_count": 0.0,
+    "prev_sentiment": 0.0
+  },
+  "experiment_note": "Leakage-free: label = is_volatile at t+1 (lead=1)",
+  "n_train": 19956,
+  "n_test": 4989,
+  "n_features": 18
+}

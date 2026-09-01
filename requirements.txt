@@ -1,0 +1,29 @@
+# ============================================================
+# Requirements: Penelitian Analisis Prediktif Harga Emas
+# Scopus Proceeding - S2 Big Data Analytics
+# ============================================================
+
+# --- Data Collection ---
+yfinance>=0.2.40
+requests>=2.31.0
+
+# --- Data Processing ---
+pandas>=2.0.0
+numpy>=1.26.0
+
+# --- NLP & Sentiment Analysis ---
+vaderSentiment>=3.3.2
+transformers>=4.40.0
+torch>=2.0.0
+sentencepiece>=0.2.0
+
+# --- Big Data Processing ---
+pyspark>=3.5.0
+
+# --- Visualisasi ---
+matplotlib>=3.8.0
+seaborn>=0.13.0
+
+# --- Jupyter Notebook (opsional) ---
+jupyter>=1.0.0
+ipykernel>=6.0.0

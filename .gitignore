@@ -1,0 +1,54 @@
+# ============================================================
+# .gitignore — Gold Price Predictive Analytics Research
+# ============================================================
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+.env
+*.egg
+.venv/
+venv/
+env/
+
+# --- Jupyter Notebook ---
+.ipynb_checkpoints/
+
+# --- Data (file besar, tidak di-push ke GitHub) ---
+# Uncomment baris di bawah jika ingin exclude data mentah:
+# data/raw/gold_price_raw.csv
+# data/raw/news_raw.json
+data/processed/hive_table_gold_price/
+data/processed/hbase_table_news/
+
+# --- Spark Model (binary, bisa sangat besar) ---
+output/models/rf_model/
+
+# --- Spark Temporary Files ---
+derby.log
+metastore_db/
+spark-warehouse/
+
+# --- OS Files ---
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- IDE ---
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# --- API Keys / Secrets (JANGAN PUSH!) ---
+.env
+secrets.json
+api_keys.txt
+
+# --- Log Files ---
+*.log
+logs/
