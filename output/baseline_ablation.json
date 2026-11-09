@@ -1,0 +1,113 @@
+{
+  "Majority class": {
+    "AUC-ROC": 0.5,
+    "Accuracy": 0.7839,
+    "F1_weighted": 0.689,
+    "Recall_volatile": 0.0,
+    "Balanced_Accuracy": 0.5,
+    "MCC": 0.0
+  },
+  "Historical-volatility rule": {
+    "AUC-ROC": 0.7036,
+    "Accuracy": 0.648,
+    "F1_weighted": 0.6784,
+    "Recall_volatile": 0.6772,
+    "Balanced_Accuracy": 0.6586,
+    "MCC": 0.2638
+  },
+  "Logistic Regression": {
+    "AUC-ROC": 0.7213,
+    "Accuracy": 0.7815,
+    "F1_weighted": 0.7164,
+    "Recall_volatile": 0.0835,
+    "Balanced_Accuracy": 0.5287,
+    "MCC": 0.1228
+  },
+  "RF (full, 18 features)": {
+    "AUC-ROC": 0.8035,
+    "Accuracy": 0.822,
+    "F1_weighted": 0.7922,
+    "Recall_volatile": 0.2978,
+    "Balanced_Accuracy": 0.6321,
+    "MCC": 0.3789
+  },
+  "RF w/o temporal": {
+    "AUC-ROC": 0.7314,
+    "Accuracy": 0.7849,
+    "F1_weighted": 0.7207,
+    "Recall_volatile": 0.0909,
+    "Balanced_Accuracy": 0.5336,
+    "MCC": 0.144
+  },
+  "RF w/o sentiment": {
+    "AUC-ROC": 0.8073,
+    "Accuracy": 0.826,
+    "F1_weighted": 0.8001,
+    "Recall_volatile": 0.3293,
+    "Balanced_Accuracy": 0.6461,
+    "MCC": 0.4005
+  },
+  "RF GC=F-only (GC=F test rows)": {
+    "AUC-ROC": 0.6835,
+    "Accuracy": 0.8888,
+    "F1_weighted": 0.8382,
+    "Recall_volatile": 0.008,
+    "Balanced_Accuracy": 0.5035,
+    "MCC": 0.0522
+  },
+  "RF full (GC=F test rows)": {
+    "AUC-ROC": 0.6821,
+    "Accuracy": 0.8893,
+    "F1_weighted": 0.8417,
+    "Recall_volatile": 0.024,
+    "Balanced_Accuracy": 0.5107,
+    "MCC": 0.0969
+  },
+  "RF GC=F-only w/o temporal (GC=F test rows)": {
+    "AUC-ROC": 0.6637,
+    "Accuracy": 0.8888,
+    "F1_weighted": 0.8365,
+    "Recall_volatile": 0.0,
+    "Balanced_Accuracy": 0.5,
+    "MCC": 0.0
+  },
+  "RF ETF-only (ETF test rows)": {
+    "AUC-ROC": 0.8179,
+    "Accuracy": 0.7788,
+    "F1_weighted": 0.7639,
+    "Recall_volatile": 0.465,
+    "Balanced_Accuracy": 0.6899,
+    "MCC": 0.4359
+  },
+  "RF ETF-only w/o temporal (ETF test rows)": {
+    "AUC-ROC": 0.6726,
+    "Accuracy": 0.7033,
+    "F1_weighted": 0.6419,
+    "Recall_volatile": 0.1558,
+    "Balanced_Accuracy": 0.5481,
+    "MCC": 0.1553
+  },
+  "top5_importance": {
+    "RF GC=F-only": {
+      "price_range": 0.2176,
+      "volatility_7h": 0.1489,
+      "trade_hour": 0.1138,
+      "pct_change": 0.0978,
+      "ma_24h": 0.0714
+    },
+    "RF ETF-only": {
+      "trade_hour": 0.5511,
+      "price_range": 0.1233,
+      "volatility_7h": 0.0701,
+      "pct_change": 0.0468,
+      "open_price": 0.034
+    }
+  },
+  "per_instrument_AUC_full_model": {
+    "Gold Futures (COMEX)": 0.6821,
+    "Junior Gold Miners ETF": 0.7343,
+    "SPDR Gold Shares ETF": 0.8084,
+    "VanEck Gold Miners ETF": 0.7438,
+    "iShares Gold Trust ETF": 0.8243
+  }
+}

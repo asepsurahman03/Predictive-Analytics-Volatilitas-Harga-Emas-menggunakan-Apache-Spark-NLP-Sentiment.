@@ -168,9 +168,8 @@ print(f"[OK] chart1_gold_trend_sentiment.png")
 # ============================================================
 print("\n[INFO] Membuat Chart 2: Distribusi Sentimen vs Volatilitas...")
 
+# Judul figure diberikan oleh caption IEEE di paper (tanpa suptitle)
 fig, axes = plt.subplots(1, 2, figsize=(11, 5))
-fig.suptitle("Fig. 3.  Sentiment Distribution by Volatility Class and Feature Correlation Matrix",
-             fontsize=11, fontweight="bold")
 
 # --- Panel kiri: Violin + Box ---
 ax = axes[0]
@@ -185,10 +184,10 @@ ax.set_ylabel("VADER Compound Score", fontsize=10)
 ax.set_facecolor("#F8F9FA")
 ax.grid(True, axis="y")
 
-# Add n-count annotations
-for i, (lbl, grp) in enumerate(df.groupby("Volatility")):
-    ax.text(i, df["avg_sentiment"].max() * 0.9,
-            f"n={len(grp):,}", ha="center", fontsize=9, color="#333333")
+# n-count di label sumbu-x agar tidak tertimpa garis violin
+counts = df["Volatility"].value_counts()
+ax.set_xticks([0, 1])
+ax.set_xticklabels([f"{c}\n(n={counts[c]:,})" for c in ["Stable", "Volatile"]])
 
 # --- Panel kanan: Correlation Heatmap ---
 ax2 = axes[1]
@@ -267,8 +266,11 @@ if feat_data:
     top10 = sorted(feat_data.items(), key=lambda x: -x[1])[:10]
     fn = [x[0] for x in top10][::-1]
     fv = [x[1] for x in top10][::-1]
-    colors_f = [C_RED if "trade_hour" in f or "price_range" in f
-                else C_BLUE for f in fn]
+    def _bar_color(f):
+        if "trade_hour" in f: return C_RED
+        if "price_range" in f: return C_PURPLE
+        return C_BLUE
+    colors_f = [_bar_color(f) for f in fn]
     bars2 = ax2.barh(fn, fv, color=colors_f, alpha=0.82,
                      height=0.55, edgecolor="white", linewidth=0.5)
     ax2.set_xlabel("Importance Score", fontsize=10)
@@ -279,14 +281,21 @@ if feat_data:
                  f"{val:.3f}", va="center", fontsize=8.5)
     ax2.grid(True, axis="x", alpha=0.5)
     ax2.set_axisbelow(True)
-    # Annotation for novel finding
+    # Ensure right margin wide enough; annotation placed INSIDE (left of bar) to avoid clipping
+    max_fv = max(fv) if fv else 0.45
+    ax2.set_xlim(0, max_fv * 1.55)
     for i, f in enumerate(fn):
         if f == "trade_hour":
-            ax2.annotate("Novel finding\n(Intraday Seasonality)",
-                         xy=(fv[i], i),
-                         xytext=(fv[i] + 0.05, i + 0.5),
-                         fontsize=8, color=C_RED,
-                         arrowprops=dict(arrowstyle="->", color=C_RED, lw=1))
+            ax2.annotate(
+                "Novel finding\n(Intraday Seasonality)",
+                xy=(fv[i], i),
+                xytext=(fv[i] * 0.5, i - 0.8),
+                fontsize=8, color=C_RED, fontweight="bold",
+                ha="center", va="top",
+                arrowprops=dict(arrowstyle="->", color=C_RED, lw=1.2),
+                bbox=dict(boxstyle="round,pad=0.25", facecolor="white",
+                          edgecolor=C_RED, alpha=0.9)
+            )
             break
 
 plt.tight_layout()
@@ -307,17 +316,16 @@ angles += angles[:1]
 scores_plot = scores + scores[:1]
 
 descriptions = [
-    "24,955 hourly rows\n15 Hive partitions",
-    "1h interval data\n23h/day (GC=F)",
-    "CSV + JSON + NLP\nHive + HBase + VADER",
-    "Yahoo Finance\nNewsAPI + dedup",
-    "AUC-ROC 93.83%\nVolatility prediction"
+    "24,955 hourly rows; 15 Hive partitions",
+    "1h interval data; 23h/day (GC=F)",
+    "CSV + JSON + NLP (Hive, HBase, VADER)",
+    "Yahoo Finance + NewsAPI; dedup",
+    f"AUC-ROC {eval_res['AUC-ROC']*100:.2f}%; next-hour volatility",
 ]
 colors_5v = [C_BLUE, C_GREEN, C_ORANGE, C_PURPLE, C_GOLD]
 
-fig = plt.figure(figsize=(13, 6))
-fig.suptitle("Fig. 5.  5V Big Data Framework Validation for Gold Volatility Analytics",
-             fontsize=11, fontweight="bold", y=0.98)
+# Ukuran ringkas untuk satu kolom IEEE (judul dari caption paper)
+fig = plt.figure(figsize=(7.2, 3.3))
 
 # Radar
 ax_r = fig.add_subplot(121, polar=True)
@@ -330,48 +338,37 @@ for level in [0.25, 0.5, 0.75, 1.0]:
     ax_r.plot(angles, [level] * (N + 1), color="#CCCCCC", lw=0.5, ls="--", zorder=1)
 
 ax_r.set_xticks(angles[:-1])
-ax_r.set_xticklabels(labels, fontsize=11, fontweight="bold", color="#1a1a1a")
+ax_r.set_xticklabels(labels, fontsize=12, fontweight="bold", color="#1a1a1a")
 ax_r.set_yticks([0.25, 0.5, 0.75, 1.0])
-ax_r.set_yticklabels(["25%", "50%", "75%", "100%"], fontsize=8, color="#666666")
+ax_r.set_yticklabels(["25%", "50%", "75%", "100%"], fontsize=9, color="#555555")
 ax_r.set_ylim(0, 1.0)
-ax_r.set_title("Research 5V Score", fontsize=10, fontweight="bold", pad=15)
+ax_r.set_rlabel_position(108)
+ax_r.tick_params(axis="x", pad=8)
+ax_r.set_title("(a) 5V score", fontsize=12, fontweight="bold", pad=14)
 
 # Score dots
 for angle, score, color in zip(angles[:-1], scores, colors_5v):
-    ax_r.scatter(angle, score, color=color, s=60, zorder=6)
+    ax_r.scatter(angle, score, color=color, s=50, zorder=6)
 
-# Detail panel
+# Detail panel: label, skor, bar, deskripsi
 ax_d = fig.add_subplot(122)
-ax_d.set_facecolor("white")
 ax_d.set_xlim(0, 1); ax_d.set_ylim(0, 1)
 ax_d.axis("off")
+ax_d.set_title("(b) Per-dimension score", fontsize=12, fontweight="bold")
 
 for i, (lbl, sc, dsc, col) in enumerate(zip(labels, scores, descriptions, colors_5v)):
-    y = 0.88 - i * 0.19
-    # Box
-    rect = mpatches.FancyBboxPatch((0.01, y - 0.06), 0.97, 0.17,
-                                    boxstyle="round,pad=0.01",
-                                    facecolor=col + "18",
-                                    edgecolor=col, linewidth=1.5)
-    ax_d.add_patch(rect)
-    # Label
-    ax_d.text(0.06, y + 0.035, lbl, color=col, fontsize=11,
-              fontweight="bold", va="center", fontfamily="Times New Roman")
-    # Description
-    ax_d.text(0.06, y - 0.025, dsc, color="#333333", fontsize=8.5,
-              va="center", linespacing=1.4, fontfamily="Times New Roman")
-    # Progress bar background
-    ax_d.add_patch(mpatches.Rectangle((0.42, y - 0.008), 0.52, 0.018,
+    y = 0.90 - i * 0.20
+    ax_d.text(0.0, y + 0.05, lbl, color=col, fontsize=12, fontweight="bold", va="center")
+    ax_d.text(1.0, y + 0.05, f"{sc*100:.0f}%", color=col, fontsize=12,
+              fontweight="bold", ha="right", va="center")
+    ax_d.add_patch(mpatches.Rectangle((0.0, y - 0.015), 1.0, 0.035,
                                        facecolor="#E8E8E8", edgecolor="none"))
-    # Progress bar fill
-    ax_d.add_patch(mpatches.Rectangle((0.42, y - 0.008), sc * 0.52, 0.018,
+    ax_d.add_patch(mpatches.Rectangle((0.0, y - 0.015), sc, 0.035,
                                        facecolor=col, edgecolor="none", alpha=0.85))
-    # Percentage text
-    ax_d.text(0.96, y, f"{sc*100:.0f}%", color=col, fontsize=10,
-              fontweight="bold", ha="right", va="center", fontfamily="Times New Roman")
+    ax_d.text(0.0, y - 0.06, dsc, color="#333333", fontsize=9, va="center")
 
-plt.tight_layout(rect=[0, 0, 1, 0.95])
-plt.savefig(os.path.join(CHARTS, "chart4_5v_bigdata.png"))
+plt.tight_layout()
+plt.savefig(os.path.join(CHARTS, "chart4_5v_bigdata.png"), dpi=300)
 plt.close()
 print(f"[OK] chart4_5v_bigdata.png")
 
