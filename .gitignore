@@ -52,3 +52,7 @@ api_keys.txt
 # --- Log Files ---
 *.log
 logs/
+
+# --- Naskah paper (belum terbit; tidak dipublikasikan) ---
+Artikel/
+fix_paper_*.py

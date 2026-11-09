@@ -1,5 +1,7 @@
 # RINGKASAN LENGKAP PENELITIAN — Untuk Referensi AI & Pencarian Jurnal/Prosiding
 
+> ⚠️ **Catatan (November 2026):** ringkasan ini berasal dari versi awal penelitian. Angka di dalamnya (mis. AUC-ROC 93,83%, 288 artikel, skor 5V) sudah tidak berlaku. Hasil terbaru yang bebas *look-ahead leakage*: AUC-ROC 80,35%, recall kelas volatil 29,78%, MCC 0,38, dan 292 artikel. Rinciannya ada di `README.md` dan `output/*.json`.
+
 > **Dokumen ini berisi deskripsi lengkap penelitian saya untuk dikirim ke AI lain.**
 > Tujuan: Mendapatkan rekomendasi jurnal/prosiding Scopus yang paling cocok.
 

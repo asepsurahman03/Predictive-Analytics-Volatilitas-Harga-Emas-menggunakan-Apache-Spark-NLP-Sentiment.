@@ -21,7 +21,7 @@
 
 ## 📌 Ringkasan Eksekutif (Executive Summary)
 
-Penelitian ini mengimplementasikan **arsitektur pipeline Big Data end-to-end** untuk memprediksi volatilitas harga emas (*Gold / XAU*) secara *intraday* (granularitas per jam). Penelitian ini menjembatani kesenjangan riset sebelumnya dengan mengintegrasikan **data harga multi-instrumen (Futures + 4 ETF emas)** bersama **analisis sentimen berita keuangan global (NLP)** menggunakan ekosistem terdistribusi **Hadoop (HDFS, Hive, HBase)** dan **Apache Spark (PySpark MLlib)**.
+Penelitian ini mengimplementasikan **pipeline Big Data end-to-end** untuk mengklasifikasikan apakah return emas pada **jam berikutnya (t+1)** melebihi 0,5% (volatil). Data harga **multi-instrumen (Futures + 4 ETF emas)** digabung dengan **sentimen berita (VADER NLP)**, diproses dengan **Apache Spark (PySpark MLlib)** di atas penyimpanan bergaya **Hive** (partisi ticker × tahun) dan **HBase** (row-key JSON) yang diemulasikan pada *file system* lokal (single node).
 
 ```
                   ┌────────────────────────────────────────────────────────┐
@@ -31,8 +31,8 @@ Penelitian ini mengimplementasikan **arsitektur pipeline Big Data end-to-end** u
                                              │
                                              ▼
                   ┌────────────────────────────────────────────────────────┐
-                  │               DISTRIBUTED STORAGE LAYER                │
-                  │  Structured (Hive: 15 partitions) + Unstructured (HBase)│
+                  │        STORAGE LAYER (emulated on local file system)   │
+                  │  Hive-style 15 partitions  +  HBase-style JSON rows     │
                   └──────────────────────────┬─────────────────────────────┘
                                              │
                                              ▼
@@ -44,7 +44,7 @@ Penelitian ini mengimplementasikan **arsitektur pipeline Big Data end-to-end** u
                                              ▼
                   ┌────────────────────────────────────────────────────────┐
                   │        PREDICTIVE MODELING & VISUAL ANALYTICS          │
-                  │  Spark MLlib Random Forest | AUC: 93.83% | 5V Radar    │
+                  │  Spark MLlib RF | AUC-ROC 80.35% | MCC 0.38 | Recall 29.78%│
                   └────────────────────────────────────────────────────────┘
 ```
 
@@ -52,36 +52,52 @@ Penelitian ini mengimplementasikan **arsitektur pipeline Big Data end-to-end** u
 
 ## 🏆 Kinerja Model & Hasil Utama (Key Results)
 
-Model prediktif dilatih menggunakan **Random Forest Classifier (Spark MLlib)** dengan evaluasi *chronological split* (80/20) untuk menghindari *look-ahead data leakage*.
+Model **Random Forest (Spark MLlib, B=100, depth=8)** dievaluasi dengan *hold-out* kronologis 80/20 (19.956 / 4.989 baris) dan *walk-forward* 5 fold dengan embargo 1 hari. Label = volatilitas jam t+1 (tanpa *look-ahead leakage*). Sumber angka: `output/model_evaluation.json`, `output/baseline_ablation.json`, `output/robustness.json`.
 
-### 📊 Metrik Evaluasi
+### 📊 Hold-out (test set 4.989 baris; 21,6% volatil)
 
-| Metrik | Skor | Keterangan |
+| Metrik | Skor | Catatan |
 |:---|:---:|:---|
-| **⭐ AUC-ROC** | **`93.83%`** | Kemampuan diskriminasi kelas volatilitas luar biasa tinggi |
-| **🎯 Accuracy** | **`88.28%`** | Ketepatan klasifikasi total kondisi pasar |
-| **⚖️ F1-Score** | **`88.12%`** | Keseimbangan presisi dan sensitivitas model |
-| **🔍 Precision**| **`88.02%`** | Ketepatan saat mendeteksi lonjakan volatilitas |
-| **📡 Recall**   | **`88.28%`** | Rasio deteksi lonjakan volatilitas aktual |
+| AUC-ROC | **80.35%** | 95% CI bootstrap 78.8–81.9% |
+| Recall kelas volatil | **29.78%** | Threshold default 0,5; sebagian besar jam volatil terlewat |
+| Precision kelas volatil | 71.02% | |
+| MCC | **0.38** | Majority class: 0.00 |
+| Balanced accuracy | 63.21% | |
+| Accuracy | 82.20% | Baseline majority class: 78.39% |
+| Recall dengan threshold 0,24 (di-tuning di slice validasi) | 68.55% | MCC 0.43 |
 
-### 🔍 Top-5 Fitur Paling Berpengaruh (Feature Importance)
-1. 🥇 **`price_range` (32.85%)** — Rentang fluktuasi harga (*High - Low*) per jam.
-2. 🥈 **`trade_hour` (22.14%)** — **Pola Intraday**; jam pembukaan sesi London & New York memberikan dampak lonjakan volatilitas terbesar.
-3. 🥉 **`volatility_7h` (21.68%)** — Momentum deviasi standar pergerakan harga 7 jam ke belakang.
-4. 🔹 **`ma_7h` (3.76%)** — *Moving Average* jangka pendek.
-5. 🔹 **`ma_24h` (3.43%)** — *Moving Average* tren harian.
+### ⚖️ Perbandingan & Robustness
+
+| Setting | AUC-ROC | Catatan |
+|:---|:---:|:---|
+| RF (hold-out) | 80.35% | Lebih baik dari LR dan aturan historis (uji DeLong p < 0,001) |
+| Gradient-Boosted Trees | 79.31% | RF sedikit lebih baik (DeLong p = 0,012) |
+| Logistic Regression | 72.13% | |
+| Aturan volatilitas historis (σ7h > θ) | 70.36% | Recall tinggi (67.72%), banyak alarm palsu |
+| Walk-forward RF (5 fold) | 81.07 ± 2.98% | |
+| Target *session-aware* | 76.31% | trade_hour turun ke 6.21%; fitur temporal hanya +0,53 poin |
+| AUC per instrumen | GC=F 68.21% · GDXJ 73.43% · GDX 74.38% · GLD 80.84% · IAU 82.43% | Penggabungan instrumen tidak membantu GC=F |
+
+**Temuan utama:** importance `trade_hour` (41.06%) sebagian besar berasal dari *overnight gap* di batas sesi ETF (bar terakhir 15:00 ET → bar pembukaan esok hari), bukan dari *intraday seasonality* murni. Fitur sentimen tidak berpengaruh, karena 292 artikel hanya jatuh di 9 hari (1,6% baris).
+
+### 🔍 Top-5 Feature Importance (Gini)
+1. `trade_hour` — 41.06% (terutama efek batas sesi ETF)
+2. `volatility_7h` — 11.35%
+3. `price_range` — 10.25%
+4. `high_price` — 5.02%
+5. `ma_7h` — 4.74%
 
 ---
 
-## 🔬 Bukti Implementasi 5V Big Data
+## 🔬 Indikator 5V Big Data (terukur)
 
-| Pilar 5V | Implementasi Riil dalam Repositori | Rating |
-|:---|:---|:---:|
-| **Volume** | **24.955** baris data *hourly* 2 tahun, **15 partisi Hive**, 288 dokumen HBase | **90%** |
-| **Velocity** | Data per jam (23 jam/hari), ingestion otomatis, siap *streaming batch* | **80%** |
-| **Variety** | Heterogen: CSV Terstruktur (Hive) + JSON Semi-Terstruktur (HBase) + Teks Bebas (NLP) | **90%** |
-| **Veracity** | Validasi Yahoo Finance COMEX + verifikasi NewsAPI global, pembersihan missing values | **85%** |
-| **Value** | Model klasifikasi volatilitas berakurasi tinggi untuk mitigasi risiko investasi | **88%** |
+| V | Indikator |
+|:---|:---|
+| **Volume** | 24.955 baris *hourly*, 15 partisi bergaya Hive (ticker × tahun), 292 dokumen JSON bergaya HBase |
+| **Velocity** | Bar per jam; training RF 20,3 s (1 core) → 10,6 s (8 thread) pada single node |
+| **Variety** | CSV, JSON, dan teks berita; 5 instrumen |
+| **Veracity** | Harga dari bursa (Yahoo Finance); 10 baris tidak lengkap dibuang |
+| **Value** | AUC-ROC 80.35%; recall volatil 29.78% (68.55% dengan threshold yang di-tuning) |
 
 ---
 
@@ -94,7 +110,7 @@ Visualisasi grafik diproduksi dengan resolusi tinggi (300 DPI) dalam format publ
 | ![Tren & Sentimen](output/charts/chart1_gold_trend_sentiment.png) | **Chart 1: Tren Fluktuasi Harga Multi-Instrumen & Distribusi Sentimen Berita Global** |
 | ![Korelasi Sentimen](output/charts/chart2_sentiment_volatility.png) | **Chart 2: Analisis Sentimen VADER vs Volatilitas Harga Emas** |
 | ![Evaluasi Model](output/charts/chart3_model_evaluation.png) | **Chart 3: Dashboard Kinerja Model Spark MLlib & Feature Importance** |
-| ![Radar 5V](output/charts/chart4_5v_bigdata.png) | **Chart 4: Radar Assessment 5V Big Data Architecture** |
+| ![Radar 5V](output/charts/chart4_5v_bigdata.png) | **Chart 4: Radar 5V (rubrik penilaian sendiri; tidak dipakai di paper karena subjektif)** |
 | ![Arsitektur Pipeline](output/charts/chart5_architecture.png) | **Chart 5: Diagram Alir Pipeline Terdistribusi End-to-End** |
 
 ---
@@ -117,19 +133,24 @@ Dataset terstruktur mencakup 5 instrumen emas global (periode Agustus 2024 – J
 ## 📂 Struktur Repositori
 
 ```bash
-├── Artikel/                     # Naskah ilmiah (Word / LaTeX template publikasi)
 ├── data/
 │   ├── raw/                     # Data mentah: gold_price_raw.csv & news_raw.json
-│   └── processed/               # Data terstruktur hasil Hive & HBase
+│   └── processed/               # merged_dataset.csv, skor sentimen, partisi Hive/HBase (lokal)
 ├── output/
-│   ├── charts/                  # 5 Grafik visualisasi resolusi tinggi (PNG)
-│   └── model_evaluation.json    # Log metrik evaluasi model (JSON)
+│   ├── charts/                  # Grafik visualisasi (PNG)
+│   ├── model_evaluation.json    # Metrik RF hold-out
+│   ├── baseline_ablation.json   # Baseline, ablasi, kontrol per instrumen
+│   └── robustness.json          # Session-aware, imbalance, GBT, uji statistik, walk-forward, benchmark
 ├── scripts/
-│   ├── 01_collect_gold_price.py # Scraping multi-instrument Yahoo Finance -> Hive
-│   ├── 02_collect_news.py       # Scraping berita pasar global -> HBase format
-│   ├── 03_sentiment_analysis.py # VADER NLP Sentiment scoring & data fusion
-│   ├── 04_spark_ml_analysis.py  # Spark MLlib Feature Pipeline & Random Forest
-│   └── 05_visualization.py      # Generator 5 grafik analisis publikasi
+│   ├── 01_collect_gold_price.py # Yahoo Finance (hourly) -> partisi bergaya Hive
+│   ├── 02_collect_news.py       # NewsAPI -> JSON bergaya HBase (isi NEWS_API_KEY sendiri)
+│   ├── 03_sentiment_analysis.py # Skoring sentimen VADER
+│   ├── 04_spark_ml_analysis.py  # Fitur Spark Window Functions + Random Forest
+│   ├── 05_visualization.py      # Grafik analisis
+│   ├── 06_baselines_ablation.py # Baseline, ablasi temporal/sentimen, GC=F-only & ETF-only
+│   └── 07_robustness.py         # Target session-aware, threshold/class weight, GBT, DeLong,
+│                                #   bootstrap, walk-forward + embargo, sensitivitas θ, benchmark
+├── fix_chart3.py                # Grafik metrik & feature importance
 ├── COLAB_NOTEBOOK.py            # Standalone pipeline siap Google Colab
 ├── gold_price_research.ipynb    # Jupyter Notebook interaktif
 ├── PANDUAN_GOOGLE_COLAB.md      # Panduan eksekusi di Cloud Google Colab
@@ -161,7 +182,11 @@ python scripts/02_collect_news.py
 python scripts/03_sentiment_analysis.py
 python scripts/04_spark_ml_analysis.py
 python scripts/05_visualization.py
+python scripts/06_baselines_ablation.py   # ±15 menit (Spark local)
+python scripts/07_robustness.py           # ±30 menit (±40 fit RF + benchmark)
 ```
+
+> Catatan: skrip 06–07 membaca `data/processed/merged_dataset.csv`, sehingga bisa dijalankan tanpa mengambil ulang data. Angka RF bisa sedikit berbeda antar-run (mis. AUC 80.35% vs 80.39%) karena partisi data Spark.
 
 > 💡 **Ingin menjalankan di Google Colab?** Buka [PANDUAN_GOOGLE_COLAB.md](PANDUAN_GOOGLE_COLAB.md) untuk langkah *1-click run* gratis di GPU/CPU cloud!
 
@@ -170,7 +195,7 @@ python scripts/05_visualization.py
 ## 🛠️ Stack Teknologi
 
 * **Big Data Distributed Engine**: [Apache Spark 4.2.0](https://spark.apache.org/) (PySpark)
-* **Data Storage / Warehousing**: HDFS (Compatible Lake), Apache Hive Schema, Apache HBase JSON
+* **Data Storage**: partisi bergaya Hive dan row-key JSON bergaya HBase, diemulasikan di file system lokal (HDFS-compatible)
 * **Machine Learning**: Spark MLlib (`VectorAssembler`, `StandardScaler`, `RandomForestClassifier`)
 * **Natural Language Processing**: VADER Sentiment Analysis (`vaderSentiment`)
 * **Data Retrieval**: `yfinance`, `NewsAPI`, `requests`
